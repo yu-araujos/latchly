@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  avatarUrl String?    @map("avatar_url")
+  createdAt DateTime   @default(now()) @map("created_at")
+  
+  locks     CardLock[]
+
+  @@map("users")
+}
+
+model Board {
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  columns   Column[]
+
+  @@map("boards")
+}
+
+model Column {
+  id        String   @id @default(uuid())
+  boardId   String   @map("board_id")
+  title     String
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards     Card[]
+
+  @@map("columns")
+}
+
+model Card {
+  id          String    @id @default(uuid())
+  columnId    String    @map("column_id")
+  title       String
+  description String?   @db.Text
+  position    Int
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  column      Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  lock        CardLock?
+
+  @@map("cards")
+}
+
+model CardLock {
+  id        String   @id @default(uuid())
+  cardId    String   @unique @map("card_id")
+  userId    String   @map("user_id")
+  lockedAt  DateTime @default(now()) @map("locked_at")
+  expiresAt DateTime @map("expires_at")
+
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("card_locks")
+}
