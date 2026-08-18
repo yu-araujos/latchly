@@ -58,7 +58,7 @@ export default function Home() {
   async function handleSaveCard(data: { title: string; description: string }) {
     if (!editingCard) return;
 
-    const updatedCard = await updateCard(editingCard.id, data);
+    const updatedCard = await updateCard(editingCard.id, data, selectedUserId);
 
     setBoard((prev) => {
       if (!prev) return prev;
@@ -81,7 +81,9 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <p className="text-slate-600 font-medium text-sm">Loading Latchly board...</p>
+        <p className="text-slate-600 font-medium text-sm">
+          Loading Latchly board...
+        </p>
       </div>
     );
   }
@@ -115,5 +117,3 @@ export default function Home() {
     </main>
   );
 }
-
-

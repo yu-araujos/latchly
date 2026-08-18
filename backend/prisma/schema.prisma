@@ -65,6 +65,8 @@ model CardLock {
 
   card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socketId  String  @map("socket_id")  
 
+@@index([socketId])
   @@map("card_locks")
 }
