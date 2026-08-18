@@ -106,7 +106,34 @@ export function useBoardSocket(
       });
     });
 
+    socket.on(
+      "card-deleted",
+      ({ cardId, columnId }: { cardId: string; columnId: string }) => {
+        setBoard((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            columns: prev.columns.map((col) => {
+              if (col.id === columnId) {
+                return {
+                  ...col,
+                  cards: col.cards.filter((c) => c.id !== cardId),
+                };
+              }
+              return col;
+            }),
+          };
+        });
+      },
+    );
+
     return () => {
+      socket.off("card-created");
+      socket.off("lock-acquired");
+      socket.off("lock-released");
+      socket.off("card-updated");
+      socket.off("card-moved");
+      socket.off("card-deleted");
       socket.disconnect();
     };
   }, [boardId, userId]);

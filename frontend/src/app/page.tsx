@@ -4,7 +4,13 @@ import CardModal from "@/components/CardModal";
 import Header from "@/components/Header";
 import KanbanColumn from "@/components/KanbanColumn";
 import { useBoardSocket } from "@/hooks/useBoardSocket";
-import { createCard, fetchBoard, moveCard, updateCard } from "@/lib/api";
+import {
+  createCard,
+  deleteCard,
+  fetchBoard,
+  moveCard,
+  updateCard,
+} from "@/lib/api";
 import { Board, Card } from "@/types/kanban";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -203,6 +209,26 @@ export default function Home() {
     }
   }
 
+  async function handleDelete(cardId: string) {
+    try {
+      await deleteCard(cardId, selectedUserId);
+
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => ({
+            ...col,
+            cards: col.cards.filter((c) => c.id !== cardId),
+          })),
+        };
+      });
+      handleCloseEdit();
+    } catch (error) {
+      console.error("Failed to delete card:", error);
+    }
+  }
+
   if (loading || !board) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
@@ -241,6 +267,7 @@ export default function Home() {
             currentUserId={selectedUserId}
             onClose={handleCloseEdit}
             onSave={handleSaveCard}
+            onDelete={handleDelete}
           />
         )}
       </DragDropContext>

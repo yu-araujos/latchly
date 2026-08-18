@@ -1,10 +1,16 @@
 import { Router } from "express";
-import { createCard, updateCard, moveCard } from "../controllers/card.controller";
+import {
+  createCard,
+  updateCard,
+  moveCard,
+  deleteCard,
+} from "../controllers/card.controller";
 
-const cardRotutes = Router();
+const cardRoutes = Router();
 
-cardRotutes.post('/', createCard)
-cardRotutes.patch('/:id', updateCard)
-cardRotutes.patch('/:id/move', moveCard)
+cardRoutes.post("/", createCard);
+cardRoutes.patch("/:id", updateCard);
+cardRoutes.patch("/:id/move", moveCard);
+cardRoutes.delete("/:id", deleteCard);
 
-export {cardRotutes};
+export { cardRoutes };

@@ -1,6 +1,6 @@
 import { Card } from "@/types/kanban";
 import React, { useEffect, useState } from "react";
-import { Clock, Edit3, Lock, Save, X } from "lucide-react";
+import { Clock, Edit3, Lock, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface CardModalProps {
@@ -10,6 +10,7 @@ interface CardModalProps {
   currentUserId: string;
   onClose: () => void;
   onSave: (data: { title: string; description: string }) => void;
+  onDelete?: (cardId: string) => void;
 }
 
 export default function CardModal({
@@ -18,6 +19,7 @@ export default function CardModal({
   currentUserId,
   onClose,
   onSave,
+  onDelete,
 }: CardModalProps) {
   const [title, setTitle] = useState(card?.title ?? "");
   const [description, setDescription] = useState(card?.description ?? "");
@@ -156,31 +158,44 @@ export default function CardModal({
             ></textarea>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-sm font-medium transition-colors"
-            >
-              {isLockedByOtherUser ? "Close" : "Cancel"}
-            </button>
-
-            {!isLockedByOtherUser && (
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            {card && (
               <button
-                type="submit"
-                disabled={isSaving || !title.trim()}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                type="button"
+                onClick={() => onDelete?.(card.id)}
+                disabled={isLockedByOtherUser}
+                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                title="Delete card"
               >
-                <Save className="w-4 h-4" />
-                {isSaving
-                  ? isCreating
-                    ? "Creating..."
-                    : "Saving..."
-                  : isCreating
-                    ? "Create Card"
-                    : "Save Changes"}
+                <Trash2 className="w-5 h-5" />
               </button>
             )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-sm font-medium transition-colors"
+              >
+                {isLockedByOtherUser ? "Close" : "Cancel"}
+              </button>
+
+              {!isLockedByOtherUser && (
+                <button
+                  type="submit"
+                  disabled={isSaving || !title.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving
+                    ? isCreating
+                      ? "Creating..."
+                      : "Saving..."
+                    : isCreating
+                      ? "Create Card"
+                      : "Save Changes"}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>

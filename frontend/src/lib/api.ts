@@ -68,3 +68,21 @@ export async function moveCard(
 
   return res.json();
 }
+
+export async function deleteCard(
+  cardId: string,
+  userId: string,
+): Promise<void> {
+  const res = await fetch(`${url}/cards/${cardId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to delete card");
+  }
+}

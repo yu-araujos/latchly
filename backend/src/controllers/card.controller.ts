@@ -149,3 +149,51 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export async function deleteCard(req: Request<{ id: string }>, res: Response) {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    const card = await prisma.card.findUnique({
+      where: { id },
+      include: {
+        column: { select: { boardId: true } },
+        lock: true,
+      },
+    });
+
+    if (!card) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+
+    if (
+      card.lock &&
+      card.lock.userId !== userId &&
+      card.lock.expiresAt > new Date()
+    ) {
+      return res.status(403).json({
+        error: "FORBIDDEN",
+        message:
+          "You cannot delete this card because it is locked by another user.",
+      });
+    }
+
+    const boardId = card.column.boardId;
+    const columnId = card.columnId;
+
+    await prisma.$transaction([
+      prisma.cardLock.deleteMany({ where: { cardId: id } }),
+      prisma.card.delete({ where: { id } }),
+    ]);
+
+    const io = req.app.get("io");
+    if (io && boardId) {
+      io.to(boardId).emit("card-deleted", { cardId: id, columnId });
+    }
+    return res.status(200).json({ success: true, cardId: id });
+  } catch (error) {
+    console.error("[CardController.deleteCard] Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

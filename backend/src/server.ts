@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 import { boardRoutes } from "./routes/board.route";
-import { cardRotutes } from "./routes/card.route";
+import { cardRoutes } from "./routes/card.route";
 import {
   acquireLock,
   releaseLock,
@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/boards", boardRoutes);
-app.use("/cards", cardRotutes);
+app.use("/cards", cardRoutes);
 
 const httpServer = http.createServer(app);
 
