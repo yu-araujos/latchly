@@ -1,199 +1,122 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
-export async function createCard(req: Request<{ id: string }>, res: Response) {
-  try {
-    const { columnId, title, description } = req.body;
-
-    if (!columnId || !title) {
-      return res.status(400).json({ error: "columnId and title are required" });
-    }
-
-    const lastCard = await prisma.card.findFirst({
-      where: { columnId },
-      orderBy: { position: "desc" },
-    });
-
-    const position = lastCard ? lastCard.position + 1 : 0;
-
-    const card = await prisma.card.create({
-      data: {
-        columnId,
-        title,
-        description,
-        position,
-      },
-      include: {
-        column: {
-          select: { boardId: true },
-        },
-        lock: true,
-      },
-    });
-
-    const io = req.app.get("io");
-    if (io && card.column?.boardId) {
-      io.to(card.column.boardId).emit("card-created", { card });
-    }
-
-    return res.status(201).json(card);
-  } catch (error) {
-    console.error("[CardController.createCard] Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
-
-export async function updateCard(req: Request<{ id: string }>, res: Response) {
-  try {
-    const { id } = req.params;
-    const { title, description, userId } = req.body;
-    const lock = await prisma.cardLock.findUnique({ where: { cardId: id } });
-
-    if (lock && lock.userId !== userId && lock.expiresAt > new Date()) {
-      return res.status(403).json({
-        error: "FORBIDDEN",
-        message:
-          "You're not allowed to edit this card, because it's locked by another user.",
-      });
-    }
-
-    const card = await prisma.card.update({
-      where: { id },
-      data: {
-        ...(title !== undefined && { title }),
-        ...(description !== undefined && { description }),
-      },
-      include: {
-        column: {
-          select: { boardId: true },
-        },
-        lock: {
-          include: {
-            user: {
-              select: { id: true, name: true, avatarUrl: true },
-            },
-          },
-        },
-      },
-    });
-
-    const io = req.app.get("io");
-    if (io && card.column?.boardId) {
-      io.to(card.column.boardId).emit("card-updated", { card });
-    }
-
-    return res.status(200).json(card);
-  } catch (error) {
-    console.error("[CardController.updateCard] Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
-
 export async function moveCard(req: Request<{ id: string }>, res: Response) {
   try {
-    const { id } = req.params;
+    const { id: cardId } = req.params;
     const { targetColumnId, newPosition, userId } = req.body;
 
-    console.log("[moveCard Payload]", {
-      id,
-      targetColumnId,
-      newPosition,
-      userId,
-    });
-
-    const lock = await prisma.cardLock.findUnique({ where: { cardId: id } });
-
-    if (!targetColumnId || newPosition === undefined) {
+    if (!targetColumnId || typeof newPosition !== "number" || !userId) {
       return res
         .status(400)
-        .json({ error: "targetColumnId and newPosition are required" });
+        .json({ error: "Missing required move parameters" });
     }
 
-    if (lock && lock.userId !== userId && lock.expiresAt > new Date()) {
-      console.log("[moveCard REJECTED] Forbidden by active lock");
-      return res.status(403).json({
-        error: "FORBIDDEN",
-        message:
-          "You're not allowed to move this card, because it's locked by another user.",
+    const updatedCard = await prisma.$transaction(async (tx) => {
+      const card = await tx.card.findUnique({
+        where: { id: cardId },
+        include: { lock: true },
       });
-    }
 
-    const card = await prisma.card.update({
-      where: { id },
-      data: {
-        columnId: targetColumnId,
-        position: newPosition,
-      },
-      include: {
-        column: {
-          select: { boardId: true },
+      if (!card) {
+        throw new Error("CARD_NOT_FOUND");
+      }
+
+      const now = new Date();
+      const isLockedByOther =
+        card.lock && card.lock.userId !== userId && card.lock.expiresAt > now;
+
+      if (isLockedByOther) {
+        throw new Error("CARD_LOCKED");
+      }
+
+      const sourceColumnId = card.columnId;
+      const oldPosition = card.position;
+
+      if (sourceColumnId === targetColumnId) {
+        if (newPosition > oldPosition) {
+          await tx.card.updateMany({
+            where: {
+              columnId: sourceColumnId,
+              id: { not: cardId },
+              position: {
+                gt: oldPosition,
+                lte: newPosition,
+              },
+            },
+            data: { position: { decrement: 1 } },
+          });
+        } else if (newPosition < oldPosition) {
+          await tx.card.updateMany({
+            where: {
+              columnId: sourceColumnId,
+              id: { not: cardId },
+              position: {
+                gte: newPosition,
+                lt: oldPosition,
+              },
+            },
+            data: { position: { increment: 1 } },
+          });
+        }
+      } else {
+        await tx.card.updateMany({
+          where: {
+            columnId: sourceColumnId,
+            id: { not: cardId },
+            position: { gt: oldPosition },
+          },
+          data: { position: { decrement: 1 } },
+        });
+
+        await tx.card.updateMany({
+          where: {
+            columnId: targetColumnId,
+            id: { not: cardId },
+            position: { gte: newPosition },
+          },
+          data: { position: { increment: 1 } },
+        });
+      }
+
+      return await tx.card.update({
+        where: { id: cardId },
+        data: {
+          columnId: targetColumnId,
+          position: newPosition,
         },
-        lock: {
-          include: {
-            user: {
-              select: { id: true, name: true, avatarUrl: true },
+        include: {
+          lock: {
+            include: {
+              user: {
+                select: { id: true, name: true, avatarUrl: true },
+              },
             },
           },
         },
-      },
+      });
+    });
+
+    const column = await prisma.column.findUnique({
+      where: { id: targetColumnId },
+      select: { boardId: true },
     });
 
     const io = req.app.get("io");
-    if (io && card.column?.boardId) {
-      io.to(card.column.boardId).emit("card-moved", { card });
+    if (io && column?.boardId) {
+      io.to(column.boardId).emit("card-moved", { card: updatedCard });
     }
 
-    return res.status(200).json(card);
-  } catch (error) {
-    console.error("[CardController.moveCard] Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
-
-export async function deleteCard(req: Request<{ id: string }>, res: Response) {
-  try {
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    const card = await prisma.card.findUnique({
-      where: { id },
-      include: {
-        column: { select: { boardId: true } },
-        lock: true,
-      },
-    });
-
-    if (!card) {
+    return res.status(200).json(updatedCard);
+  } catch (error: any) {
+    if (error.message === "CARD_LOCKED") {
+      return res.status(423).json({ error: "Card is locked by another user" });
+    }
+    if (error.message === "CARD_NOT_FOUND") {
       return res.status(404).json({ error: "Card not found" });
     }
 
-    if (
-      card.lock &&
-      card.lock.userId !== userId &&
-      card.lock.expiresAt > new Date()
-    ) {
-      return res.status(403).json({
-        error: "FORBIDDEN",
-        message:
-          "You cannot delete this card because it is locked by another user.",
-      });
-    }
-
-    const boardId = card.column.boardId;
-    const columnId = card.columnId;
-
-    await prisma.$transaction([
-      prisma.cardLock.deleteMany({ where: { cardId: id } }),
-      prisma.card.delete({ where: { id } }),
-    ]);
-
-    const io = req.app.get("io");
-    if (io && boardId) {
-      io.to(boardId).emit("card-deleted", { cardId: id, columnId });
-    }
-    return res.status(200).json({ success: true, cardId: id });
-  } catch (error) {
-    console.error("[CardController.deleteCard] Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("[CardController.moveCard] Error:", error);
+    return res.status(500).json({ error: "Failed to move card" });
   }
 }
