@@ -10,6 +10,14 @@ When a user opens a card to edit it, the backend registers a lock with a 60-seco
 
 I went with pessimistic locking (rather than optimistic, where you resolve conflicts after they happen) because I wanted to simplify the user experience: better to warn someone upfront than ask them to merge changes after the fact.
 
+## Architecture & Trade-offs
+
+### Client-supplied User Identity (Known Limitation)
+
+The WebSocket events and HTTP request payloads accept `userId` directly from the client to simplify profile switching and facilitate local testing of concurrency conflicts without requiring authentication setup (e.g., login/password screens). 
+
+In a production environment, this value would be strictly extracted and verified from an authenticated session token (e.g., JWT, NextAuth, or IronSession) within Express middleware rather than trusted from the client payload.
+
 ## Stack
 
 **Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM

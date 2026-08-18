@@ -89,7 +89,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50/70 via-slate-100 to-sky-50 text-slate-800 flex flex-col font-sans antialiased">
+    <main className="h-screen bg-gradient-to-br from-indigo-50/70 via-slate-100 to-sky-50 text-slate-800 flex flex-col font-sans antialiased overflow-hidden">
       <Header
         selectedUserId={selectedUserId}
         onSelectUser={setSelectedUserId}
@@ -104,16 +104,16 @@ export default function Home() {
             onCardClick={handleOpenEdit}
           />
         ))}
-
-        {editingCard && (
-          <CardModal
-            card={editingCard}
-            isOpen={Boolean(editingCard)}
-            onClose={handleCloseEdit}
-            onSave={handleSaveCard}
-          />
-        )}
       </div>
+
+      {editingCard && (
+        <CardModal
+          card={editingCard}
+          isOpen={Boolean(editingCard)}
+          onClose={handleCloseEdit}
+          onSave={handleSaveCard}
+        />
+      )}
     </main>
   );
 }

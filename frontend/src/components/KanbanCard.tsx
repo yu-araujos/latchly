@@ -27,12 +27,11 @@ export default function KanbanCard({
 
   return (
     <motion.div
-      layout
-      transition={{ type: "spring", duration: 0.5, bounce: 0.15 }}
-      whileHover={isLockedByOther ? {} : { scale: 1.02, y: -2 }}
+      transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+      whileHover={isLockedByOther ? {} : { scale: 1.01, y: -1 }}
       animate={{ opacity: isLockedByOther ? 0.85 : 1 }}
       onClick={handleClick}
-      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between group ${
+      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between overflow-hidden group ${
         isLockedByMe
           ? "border-indigo-500/90 bg-indigo-50/70 shadow-md shadow-indigo-500/10 ring-2 ring-indigo-500/30"
           : isLockedByOther
