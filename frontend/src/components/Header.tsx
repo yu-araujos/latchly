@@ -16,8 +16,8 @@ const users: User[] = [
   },
   {
     id: "3c8991cb-c8fa-4044-8f55-d8136533bb74",
-    name: "Alice",
-    email: "alice@email.com",
+    name: "John",
+    email: "john@email.com",
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
   },
 ];

@@ -1,13 +1,13 @@
 import { prisma } from "../lib/prisma";
 
-const LOCK_DURATION = 30 * 1000; //MS
+const LOCK_DURATION = 60 * 1000; //MS
 
-export async function acquireLock(cardId:string, userId:string){
+export async function acquireLock(cardId: string, userId: string) {
   const now = new Date();
   const newExpiresAt = new Date(now.getTime() + LOCK_DURATION);
 
   const existingLock = await prisma.cardLock.findUnique({
-    where: {cardId},
+    where: { cardId },
     include: {
       user: {
         select: {
@@ -16,17 +16,20 @@ export async function acquireLock(cardId:string, userId:string){
           avatarUrl: true,
         },
       },
-    }
+    },
   });
 
-  if (existingLock && existingLock.userId !== userId && existingLock.expiresAt > now) {
+  if (
+    existingLock &&
+    existingLock.userId !== userId &&
+    existingLock.expiresAt > now
+  ) {
     return {
       success: false,
       lock: existingLock,
-      reason: 'CARD_ALREADY_LOCKED',
-    }
+      reason: "CARD_ALREADY_LOCKED",
+    };
   }
-
 
   const lock = await prisma.cardLock.upsert({
     where: { cardId },
@@ -51,11 +54,11 @@ export async function acquireLock(cardId:string, userId:string){
       },
     },
   });
-  
+
   return {
     success: true,
     lock,
-  }
+  };
 }
 
 export async function releaseLock(cardId: string, userId: string) {
@@ -64,7 +67,7 @@ export async function releaseLock(cardId: string, userId: string) {
   });
 
   if (!existingLock || existingLock.userId !== userId) {
-    return { success: false, reason: 'LOCK_NOT_OWNED' };
+    return { success: false, reason: "LOCK_NOT_OWNED" };
   }
 
   await prisma.cardLock.delete({
