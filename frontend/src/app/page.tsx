@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 
+// Architectural Note: Using a fixed Board ID intentionally for the single-board real-time demo showcase.
+// The backend schema and socket rooms fully support dynamic multi-board routing via `/boards/[id]`.
 const BOARD_ID = "7035e33a-1277-4a81-9932-d654bd7eb64d";
 
 export default function Home() {

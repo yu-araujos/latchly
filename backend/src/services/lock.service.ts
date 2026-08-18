@@ -9,55 +9,46 @@ export async function acquireLock(
 ) {
   return await prisma.$transaction(async (tx) => {
     const now = new Date();
-    const newExpiresAt = new Date(now.getTime() + LOCK_DURATION);
 
-    const existingLock = await tx.cardLock.findUnique({
-      where: { cardId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    const existingLocks: any[] = await tx.$queryRaw`
+      SELECT id, user_id, expires_at 
+      FROM "card_locks" 
+      WHERE card_id = ${cardId} 
+      FOR UPDATE
+    `;
+
+    const existingLock = existingLocks[0];
 
     if (
       existingLock &&
-      existingLock.userId !== userId &&
-      existingLock.expiresAt > now
+      existingLock.user_id !== userId &&
+      new Date(existingLock.expires_at) > now
     ) {
+      const activeLockWithUser = await tx.cardLock.findUnique({
+        where: { cardId },
+        include: {
+          user: {
+            select: { id: true, name: true, avatarUrl: true },
+          },
+        },
+      });
+
       return {
         success: false,
-        lock: existingLock,
+        lock: activeLockWithUser,
         reason: "CARD_ALREADY_LOCKED",
       };
     }
 
+    const expiresAt = new Date(now.getTime() + LOCK_DURATION);
+
     const lock = await tx.cardLock.upsert({
       where: { cardId },
-      create: {
-        cardId,
-        userId,
-        lockedAt: now,
-        expiresAt: newExpiresAt,
-        socketId,
-      },
-      update: {
-        userId,
-        lockedAt: now,
-        expiresAt: newExpiresAt,
-        socketId,
-      },
+      update: { userId, socketId, expiresAt, lockedAt: now },
+      create: { cardId, userId, socketId, expiresAt, lockedAt: now },
       include: {
         user: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
+          select: { id: true, name: true, avatarUrl: true },
         },
       },
     });

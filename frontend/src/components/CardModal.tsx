@@ -1,6 +1,7 @@
 import { Card } from "@/types/kanban";
 import React, { useEffect, useState } from "react";
 import { Clock, Edit3, Lock, Save, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface CardModalProps {
   card?: Card | null;
@@ -51,7 +52,7 @@ export default function CardModal({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, card, isLockedByOtherUser]);
 
   async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
@@ -62,7 +63,10 @@ export default function CardModal({
       await onSave({ title, description });
       onClose();
     } catch (error) {
-      alert("Error while saving.");
+      toast.error("Card Locked", {
+        description:
+          "You cannot edit this card because it is currently locked by another user.",
+      });
     } finally {
       setIsSaving(false);
     }
