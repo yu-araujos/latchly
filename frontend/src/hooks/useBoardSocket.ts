@@ -1,4 +1,4 @@
-import { Board, Card } from "@/types/kanban";
+import { Board, Card, Column } from "@/types/kanban";
 import React, { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -127,6 +127,40 @@ export function useBoardSocket(
       },
     );
 
+    socket.on("column-created", ({ column }: { column: Column }) => {
+      setBoard((prev) => {
+        if (!prev) return prev;
+        const exists = prev.columns.some((c) => c.id === column.id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          columns: [...prev.columns, { ...column, cards: column.cards ?? [] }],
+        };
+      });
+    });
+
+    socket.on("column-updated", ({ column }: { column: Column }) => {
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((c) =>
+            c.id === column.id ? { ...c, title: column.title } : c,
+          ),
+        };
+      });
+    });
+
+    socket.on("column-deleted", ({ columnId }: { columnId: string }) => {
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.filter((c) => c.id !== columnId),
+        };
+      });
+    });
+
     return () => {
       socket.off("card-created");
       socket.off("lock-acquired");
@@ -134,6 +168,9 @@ export function useBoardSocket(
       socket.off("card-updated");
       socket.off("card-moved");
       socket.off("card-deleted");
+      socket.off("column-created");
+      socket.off("column-updated");
+      socket.off("column-deleted");
       socket.disconnect();
     };
   }, [boardId, userId]);

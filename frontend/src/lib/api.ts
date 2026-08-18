@@ -1,4 +1,4 @@
-import { Board, Card } from "@/types/kanban";
+import { Board, Card, Column } from "@/types/kanban";
 
 const url = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -85,4 +85,37 @@ export async function deleteCard(
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.message || "Failed to delete card");
   }
+}
+
+export async function createColumn(
+  boardId: string,
+  title: string,
+): Promise<Column> {
+  const res = await fetch(`${url}/boards/${boardId}/columns`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error("Failed to create column");
+  return res.json();
+}
+
+export async function updateColumn(
+  columnId: string,
+  title: string,
+): Promise<Column> {
+  const res = await fetch(`${url}/columns/${columnId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error("Failed to update column");
+  return res.json();
+}
+
+export async function deleteColumn(columnId: string): Promise<void> {
+  const res = await fetch(`${url}/columns/${columnId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete column");
 }

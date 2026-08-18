@@ -6,15 +6,19 @@ import KanbanColumn from "@/components/KanbanColumn";
 import { useBoardSocket } from "@/hooks/useBoardSocket";
 import {
   createCard,
+  createColumn,
   deleteCard,
+  deleteColumn,
   fetchBoard,
   moveCard,
   updateCard,
+  updateColumn,
 } from "@/lib/api";
 import { Board, Card } from "@/types/kanban";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
+import AddColumnButton from "@/components/AddColumnButton";
 
 // Architectural Note: Using a fixed Board ID intentionally for the single-board real-time demo showcase.
 // The backend schema and socket rooms fully support dynamic multi-board routing via `/boards/[id]`.
@@ -229,6 +233,55 @@ export default function Home() {
     }
   }
 
+  async function handleCreateColumn(title: string) {
+    try {
+      const newCol = await createColumn(BOARD_ID, title);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        const exists = prev.columns.some((c) => c.id === newCol.id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          columns: [...prev.columns, { ...newCol, cards: [] }],
+        };
+      });
+    } catch (error) {
+      console.error("Failed to create column:", error);
+    }
+  }
+
+  async function handleUpdateColumnTitle(columnId: string, title: string) {
+    try {
+      await updateColumn(columnId, title);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((c) =>
+            c.id === columnId ? { ...c, title } : c,
+          ),
+        };
+      });
+    } catch (error) {
+      console.error("Failed to update column:", error);
+    }
+  }
+
+  async function handleDeleteColumn(columnId: string) {
+    try {
+      await deleteColumn(columnId);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.filter((c) => c.id !== columnId),
+        };
+      });
+    } catch (error) {
+      console.error("Failed to delete column:", error);
+    }
+  }
+
   if (loading || !board) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
@@ -256,8 +309,12 @@ export default function Home() {
               currentUserId={selectedUserId}
               onCardClick={handleOpenEdit}
               onAddCard={handleCreate}
+              onDeleteColumn={handleDeleteColumn}
+              onUpdateTitle={handleUpdateColumnTitle}
             />
           ))}
+
+          <AddColumnButton onAdd={handleCreateColumn} />
         </div>
 
         {Boolean(editingCard || creatingColumnId) && (
