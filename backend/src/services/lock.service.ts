@@ -2,6 +2,12 @@ import { prisma } from "../lib/prisma";
 
 const LOCK_DURATION = 60 * 1000; //MS
 
+interface RawCardLock {
+  id: string;
+  user_id: string;
+  expires_at: Date;
+}
+
 export async function acquireLock(
   cardId: string,
   userId: string,
@@ -10,7 +16,7 @@ export async function acquireLock(
   return await prisma.$transaction(async (tx) => {
     const now = new Date();
 
-    const existingLocks: any[] = await tx.$queryRaw`
+    const existingLocks = await tx.$queryRaw<RawCardLock[]>`
       SELECT id, user_id, expires_at 
       FROM "card_locks" 
       WHERE card_id = ${cardId} 
@@ -97,6 +103,6 @@ export async function releaseLocksBySocket(socketId: string) {
       where: { socketId },
     });
 
-    return locks.map((l) => l.cardId);
+    return locks.map((l: { cardId: string }) => l.cardId);
   });
 }

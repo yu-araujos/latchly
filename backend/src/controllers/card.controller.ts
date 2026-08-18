@@ -216,12 +216,14 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
     }
 
     return res.status(200).json(updatedCard);
-  } catch (error: any) {
-    if (error.message === "CARD_LOCKED") {
-      return res.status(423).json({ error: "Card is locked by another user" });
-    }
-    if (error.message === "CARD_NOT_FOUND") {
-      return res.status(404).json({ error: "Card not found" });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "CARD_LOCKED") {
+        return res.status(423).json({ error: "Card is locked by another user" });
+      }
+      if (error.message === "CARD_NOT_FOUND") {
+        return res.status(404).json({ error: "Card not found" });
+      }
     }
 
     console.error("[CardController.moveCard] Error:", error);

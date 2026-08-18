@@ -112,7 +112,7 @@ export async function deleteColumn(
       select: { id: true },
     });
 
-    const cardIds = cards.map((c) => c.id);
+    const cardIds = cards.map((c: { id: string }) => c.id);
 
     await prisma.$transaction([
       prisma.cardLock.deleteMany({
