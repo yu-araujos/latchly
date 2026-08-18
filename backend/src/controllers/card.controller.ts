@@ -52,7 +52,32 @@ export async function updateCard(req: Request<{ id: string }>, res: Response) {
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),
       },
+      include: {
+        column: {
+          select: { boardId: true },
+        },
+        lock: {
+          include: {
+            user: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+          },
+        },
+      },
     });
+
+    const io = req.app.get("io");
+    console.log("[updateCard] io exists?", !!io);
+    console.log("[updateCard] boardId:", card.column?.boardId);
+    if (io && card.column?.boardId) {
+      console.log(
+        "[updateCard] Emitting card-updated to room:",
+        card.column.boardId,
+      );
+      io.to(card.column.boardId).emit("card-updated", { card });
+    } else {
+      console.warn("[updateCard] Failed to emit: missing io or boardId");
+    }
 
     return res.status(200).json(card);
   } catch (error) {
@@ -87,7 +112,24 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
         columnId: targetColumnId,
         position: newPosition,
       },
+      include: {
+        column: {
+          select: { boardId: true },
+        },
+        lock: {
+          include: {
+            user: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+          },
+        },
+      },
     });
+
+    const io = req.app.get("io");
+    if (io && card.column?.boardId) {
+      io.to(card.column.boardId).emit("card-moved", { card });
+    }
 
     return res.status(200).json(card);
   } catch (error) {

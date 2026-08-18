@@ -33,6 +33,8 @@ app.get("/health", (req, res) => {
     .json({ status: "ok", timeStamp: new Date().toISOString() });
 });
 
+app.set("io", io);
+
 const socketMetadata = new Map<string, { boardId: string; userId: string }>();
 
 io.on("connection", (socket) => {

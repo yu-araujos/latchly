@@ -1,4 +1,4 @@
-import { Board } from "@/types/kanban";
+import { Board, Card } from "@/types/kanban";
 import React, { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -48,6 +48,20 @@ export function useBoardSocket(
               }),
             };
           }),
+        };
+      });
+    });
+
+    socket.on("card-updated", ({ card }: { card: Card }) => {
+      console.log("[useBoardSocket] card-updated received:", card);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => ({
+            ...col,
+            cards: col.cards.map((c) => (c.id === card.id ? card : c)),
+          })),
         };
       });
     });
