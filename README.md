@@ -49,13 +49,6 @@ User A (Client)               Backend (Socket.io + Postgres)              User B
 5. Trying to open the card as Bob shows a lock conflict.
 6. Close Alice's modal (or wait for the 60s TTL) and the card unlocks for Bob.
 
-## What I know still isn't right
-
-- The lock currently only lives on the WebSocket side. The REST update route (`PATCH /cards/:id`) doesn't check whether the caller actually holds the lock before writing. That's the next thing to fix.
-- `acquireLock` reads the existing lock and then upserts in two separate steps, so it's not fully atomic under a race. A DB-level constraint would close that gap.
-- No real authentication. `userId` comes straight from the client payload.
-- If the same user has two tabs open, closing one releases the lock the other tab might still be relying on. Not handled yet.
-
 ## Setup
 
 ### Backend
