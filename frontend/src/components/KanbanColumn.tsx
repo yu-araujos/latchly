@@ -9,6 +9,7 @@ import {
   ListTodo,
   PlusCircle,
 } from "lucide-react";
+import { Droppable } from "@hello-pangea/dnd";
 
 interface KanbanColumnProps {
   column: Column;
@@ -60,16 +61,26 @@ export default function KanbanColumn({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-        {column.cards.map((card) => (
-          <KanbanCard
-            key={card.id}
-            card={card}
-            currentUserId={currentUserId}
-            onCardClick={onCardClick}
-          />
-        ))}
-      </div>
+      <Droppable droppableId={column.id}>
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-[120px]"
+          >
+            {column.cards.map((card, index) => (
+              <KanbanCard
+                key={card.id}
+                card={card}
+                currentUserId={currentUserId}
+                onCardClick={onCardClick}
+                index={index}
+              />
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
     </div>
   );
 }

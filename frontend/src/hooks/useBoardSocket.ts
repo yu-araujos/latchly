@@ -85,6 +85,27 @@ export function useBoardSocket(
       });
     });
 
+    socket.on("card-moved", ({ card }: { card: Card }) => {
+      setBoard((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => {
+            const filteredCards = col.cards.filter((c) => c.id !== card.id);
+
+            if (col.id === card.columnId) {
+              const updatedCards = [...filteredCards, card].sort(
+                (a, b) => a.position - b.position,
+              );
+              return { ...col, cards: updatedCards };
+            }
+            return { ...col, cards: filteredCards };
+          }),
+        };
+      });
+    });
+
     return () => {
       socket.disconnect();
     };

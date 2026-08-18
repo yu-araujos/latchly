@@ -49,7 +49,7 @@ export async function updateCard(req: Request<{ id: string }>, res: Response) {
     const { title, description, userId } = req.body;
     const lock = await prisma.cardLock.findUnique({ where: { cardId: id } });
 
-    if (!lock || lock.userId !== userId || lock.expiresAt <= new Date()) {
+    if (lock && lock.userId !== userId && lock.expiresAt > new Date()) {
       return res.status(403).json({
         error: "FORBIDDEN",
         message:
@@ -93,6 +93,14 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { targetColumnId, newPosition, userId } = req.body;
+
+    console.log("[moveCard Payload]", {
+      id,
+      targetColumnId,
+      newPosition,
+      userId,
+    });
+
     const lock = await prisma.cardLock.findUnique({ where: { cardId: id } });
 
     if (!targetColumnId || newPosition === undefined) {
@@ -101,7 +109,8 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
         .json({ error: "targetColumnId and newPosition are required" });
     }
 
-    if (!lock || lock.userId !== userId || lock.expiresAt <= new Date()) {
+    if (lock && lock.userId !== userId && lock.expiresAt > new Date()) {
+      console.log("[moveCard REJECTED] Forbidden by active lock");
       return res.status(403).json({
         error: "FORBIDDEN",
         message:

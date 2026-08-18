@@ -41,3 +41,30 @@ export async function updateCard(
   if (!res.ok) throw new Error("Failed to update card");
   return res.json();
 }
+
+export async function moveCard(
+  cardId: string,
+  data: { targetColumnId: string; newPosition: number },
+  userId: string,
+): Promise<Card> {
+  const res = await fetch(`${url}/cards/${cardId}/move`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      targetColumnId: data.targetColumnId,
+      newPosition: data.newPosition,
+      userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(
+      errorBody.message || errorBody.error || "Failed to move card",
+    );
+  }
+
+  return res.json();
+}

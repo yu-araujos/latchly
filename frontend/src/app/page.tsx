@@ -4,10 +4,11 @@ import CardModal from "@/components/CardModal";
 import Header from "@/components/Header";
 import KanbanColumn from "@/components/KanbanColumn";
 import { useBoardSocket } from "@/hooks/useBoardSocket";
-import { createCard, fetchBoard, updateCard } from "@/lib/api";
+import { createCard, fetchBoard, moveCard, updateCard } from "@/lib/api";
 import { Board, Card } from "@/types/kanban";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 
 const BOARD_ID = "7035e33a-1277-4a81-9932-d654bd7eb64d";
 
@@ -123,6 +124,83 @@ export default function Home() {
     }
   }
 
+  async function handleDragEnd(result: DropResult) {
+    if (!result.destination) return;
+
+    const { source, destination, draggableId } = result;
+
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    )
+      return;
+
+    const previousBoard = board;
+
+    setBoard((prev) => {
+      if (!prev) return prev;
+
+      const sourceCol = prev.columns.find((c) => c.id === source.droppableId);
+      const destinationCol = prev.columns.find(
+        (c) => c.id === destination.droppableId,
+      );
+
+      if (!sourceCol || !destinationCol) return prev;
+
+      const sourceCards = [...sourceCol.cards];
+
+      const destinationCards =
+        source.droppableId === destination.droppableId
+          ? sourceCards
+          : [...destinationCol.cards];
+
+      const [moveCard] = sourceCards.splice(source.index, 1);
+
+      if (!moveCard) return prev;
+
+      const updatedMovedCard = {
+        ...moveCard,
+        columnId: destination.droppableId,
+        position: destination.index,
+      };
+
+      destinationCards.splice(destination.index, 0, updatedMovedCard);
+
+      return {
+        ...prev,
+        columns: prev.columns.map((col) => {
+          if (
+            col.id === source.droppableId &&
+            source.droppableId === destination.droppableId
+          ) {
+            return { ...col, cards: destinationCards };
+          }
+          if (col.id === source.droppableId) {
+            return { ...col, cards: sourceCards };
+          }
+          if (col.id === destination.droppableId) {
+            return { ...col, cards: destinationCards };
+          }
+          return col;
+        }),
+      };
+    });
+
+    try {
+      await moveCard(
+        draggableId,
+        {
+          targetColumnId: destination.droppableId,
+          newPosition: destination.index,
+        },
+        selectedUserId,
+      );
+    } catch (error) {
+      console.error("Failed to move card on server:", error);
+      setBoard(previousBoard);
+    }
+  }
+
   if (loading || !board) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
@@ -141,27 +219,29 @@ export default function Home() {
         onSelectUser={setSelectedUserId}
       />
 
-      <div className="flex-1 flex gap-6 overflow-x-auto p-6 items-start max-w-7xl mx-auto w-full">
-        {board?.columns.map((col) => (
-          <KanbanColumn
-            key={col.id}
-            column={col}
-            currentUserId={selectedUserId}
-            onCardClick={handleOpenEdit}
-            onAddCard={handleCreate}
-          />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex-1 flex gap-6 overflow-x-auto p-6 items-start w-full">
+          {board?.columns.map((col) => (
+            <KanbanColumn
+              key={col.id}
+              column={col}
+              currentUserId={selectedUserId}
+              onCardClick={handleOpenEdit}
+              onAddCard={handleCreate}
+            />
+          ))}
+        </div>
 
-      {Boolean(editingCard || creatingColumnId) && (
-        <CardModal
-          card={editingCard}
-          isOpen={Boolean(editingCard || creatingColumnId)}
-          currentUserId={selectedUserId}
-          onClose={handleCloseEdit}
-          onSave={handleSaveCard}
-        />
-      )}
+        {Boolean(editingCard || creatingColumnId) && (
+          <CardModal
+            card={editingCard}
+            isOpen={Boolean(editingCard || creatingColumnId)}
+            currentUserId={selectedUserId}
+            onClose={handleCloseEdit}
+            onSave={handleSaveCard}
+          />
+        )}
+      </DragDropContext>
     </main>
   );
 }
