@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 const LOCK_DURATION = 60 * 1000; //MS
@@ -13,7 +14,7 @@ export async function acquireLock(
   userId: string,
   socketId: string,
 ) {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const now = new Date();
 
     const existingLocks = await tx.$queryRaw<RawCardLock[]>`
@@ -59,8 +60,6 @@ export async function acquireLock(
       },
     });
 
-    console.log("[claim-lock]", { cardId, userId, socketId });
-
     return {
       success: true,
       lock,
@@ -93,7 +92,7 @@ export async function releaseLock(
 }
 
 export async function releaseLocksBySocket(socketId: string) {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const locks = await tx.cardLock.findMany({
       where: { socketId },
       select: { cardId: true },

@@ -1,8 +1,15 @@
 # 🔒 Latchly
 
-A real-time collaborative Kanban board built to solve one specific problem: what happens when two people try to edit the same card at the same time.
+A real-time collaborative Kanban board built to solve one specific problem: what happens when two people try to edit or move the same card at the same time.
 
 I built this after running into a similar problem at work (concurrent edit conflicts on an invoicing platform). I wanted to rebuild the logic from scratch, without reusing anything from that codebase, to actually understand the decisions involved rather than just having solved it once under deadline pressure.
+
+## Features
+
+- **Pessimistic Concurrency Locks:** Opening a card registers a 60-second lock (TTL) backed by PostgreSQL & Socket.io.
+- **Real-Time Drag & Drop:** Move cards between columns seamlessly. If a card is locked by another user, dragging is automatically disabled.
+- **Real-Time Column & Card CRUD:** Create, rename (inline title editing), move, and delete columns or cards with instant updates across all connected clients.
+- **Atomic Position Reordering:** Backend transaction handling for card movement that shifts neighbor card positions safely without race conditions.
 
 ## How it works
 
@@ -20,10 +27,10 @@ In a production environment, this value would be strictly extracted and verified
 
 ## Stack
 
-**Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM
-**Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, Framer Motion, Socket.io client
+- **Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM
+- **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS v4, `@hello-pangea/dnd`, Framer Motion, Sonner, Socket.io client
 
-## Concurrency flow
+## Concurrency & Real-Time Flow
 
 ```text
 User A (Client)               Backend (Socket.io + Postgres)              User B (Client)
@@ -32,7 +39,7 @@ User A (Client)               Backend (Socket.io + Postgres)              User B
       │                                     ├── [Validates lock & TTL]           │
       │◄── lock-acquired (cardId, lock) ────┼─── lock-acquired (cardId, lock) ──►│ (Card turns locked)
       │                                     │                                    │
-      │    [User A edits modal]             │                                    │
+      │    [User A edits modal / drags]     │                                    │
       │                                     │                                    │
       ├─── release-lock (cardId, userId) ──►│                                    │
       │                                     ├── [Deletes CardLock record]        │
@@ -47,15 +54,21 @@ User A (Client)               Backend (Socket.io + Postgres)              User B
 | `lock-failed` | Server → Client | `{ cardId, reason, currentLock }` | Notifies requester that the card is already locked. |
 | `release-lock` | Client → Server | `{ boardId, cardId, userId }` | Releases the card lock explicitly. |
 | `lock-released` | Server → Room | `{ cardId }` | Broadcasted when a lock is freed. |
+| `card-created` | Server → Room | `{ card }` | Broadcasted when a new card is created. |
+| `card-updated` | Server → Room | `{ card }` | Broadcasted when a card's details are saved. |
+| `card-moved` | Server → Room | `{ card }` | Broadcasted when a card is dragged to a new position/column. |
+| `card-deleted` | Server → Room | `{ cardId, columnId }` | Broadcasted when a card is removed. |
+| `column-created` | Server → Room | `{ column }` | Broadcasted when a new column is added. |
+| `column-updated` | Server → Room | `{ column }` | Broadcasted when a column title is renamed. |
+| `column-deleted` | Server → Room | `{ columnId }` | Broadcasted when a column is deleted. |
 
 ## Testing locally
 
-1. Open `http://localhost:3000` in a regular browser window and pick a user (Alice).
+1. Open `http://localhost:3000` in a regular browser window and pick a user (John).
 2. Open the same URL in an incognito window and pick a different user (Bob).
-3. Open a card as Alice, then try opening the same card as Bob.
-4. Bob's screen should update instantly, showing the card locked by Alice.
-5. Trying to open the card as Bob shows a lock conflict.
-6. Close Alice's modal (or wait for the 60s TTL) and the card unlocks for Bob.
+3. Open a card as John, then try opening or dragging the same card as Bob.
+4. Bob's screen updates instantly, showing the card locked by John (drag is disabled).
+5. Close John's modal (or wait for the 60s TTL) and the card unlocks for Bob.
 
 ## Setup
 

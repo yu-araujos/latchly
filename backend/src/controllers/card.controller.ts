@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 export async function createCard(req: Request, res: Response) {
@@ -120,7 +121,7 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
         .json({ error: "Missing required move parameters" });
     }
 
-    const updatedCard = await prisma.$transaction(async (tx) => {
+    const updatedCard = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const card = await tx.card.findUnique({
         where: { id: cardId },
         include: { lock: true },
