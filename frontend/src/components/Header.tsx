@@ -44,9 +44,6 @@ export default function Header({ selectedUserId, onSelectUser }: HeaderProps) {
                 Live Locks
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium">
-              Real-time Pessimistic Locking Kanban
-            </p>
           </div>
         </div>
 
