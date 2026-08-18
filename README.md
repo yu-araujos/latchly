@@ -1,43 +1,21 @@
-# 🔒 Latchly — Real-Time Kanban with Pessimistic Locking
+# 🔒 Latchly
 
-Latchly is a real-time collaborative Kanban board built to solve concurrent editing conflicts using a **Pessimistic Locking strategy with TTL (Time-To-Live)**. When a user opens a card to edit, the card is locked across all connected clients via WebSockets, preventing race conditions and overwrites.
+A real-time collaborative Kanban board built to solve one specific problem: what happens when two people try to edit the same card at the same time.
 
----
+I built this after running into a similar problem at work (concurrent edit conflicts on an invoicing platform). I wanted to rebuild the logic from scratch, without reusing anything from that codebase, to actually understand the decisions involved rather than just having solved it once under deadline pressure.
 
-## ⚡ Features
+## How it works
 
-- **Real-Time Board Synchronization**: Instant card status updates across all connected clients.
-- **Pessimistic Locking**: Prevents concurrent edits by assigning exclusive edit access to a single user.
-- **Lock Expiration (TTL)**: Locks automatically expire after 30 seconds of inactivity to avoid deadlocks.
-- **Presence & Lock Indicators**: Visual indicators displaying which user currently holds the edit lock.
-- **Graceful Disconnect Handling**: Automatically releases locks when a user closes their tab or loses connection.
-- **Fluid UI & Micro-interactions**: Smooth transitions and lock state animations powered by Framer Motion.
-- **Multi-User Simulation**: Easily switch between simulated profiles (e.g., Alice and Bob) to test concurrent behavior locally.
+When a user opens a card to edit it, the backend registers a lock with a 60-second TTL and notifies everyone connected via WebSocket. While the lock is active, other users see the card as locked in real time. If the person closes the tab or loses connection, the lock is released along with it.
 
----
+I went with pessimistic locking (rather than optimistic, where you resolve conflicts after they happen) because I wanted to simplify the user experience: better to warn someone upfront than ask them to merge changes after the fact.
 
-## 🛠️ Tech Stack
+## Stack
 
-### Backend
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Real-Time Engine**: Socket.io (WebSockets)
-- **Database & ORM**: PostgreSQL (Neon Serverless) + Prisma ORM 7 (`@prisma/adapter-pg`)
-- **Language**: TypeScript (`tsx` for zero-build execution)
+**Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM
+**Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, Framer Motion, Socket.io client
 
-### Frontend
-- **Framework**: Next.js (App Router)
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **WebSocket Client**: Socket.io Client
-- **Language**: TypeScript
-
----
-
-## 🏗️ Architecture & WebSocket Events
-
-### Concurrency Flow
+## Concurrency flow
 
 ```text
 User A (Client)               Backend (Socket.io + Postgres)              User B (Client)
@@ -53,93 +31,71 @@ User A (Client)               Backend (Socket.io + Postgres)              User B
       │◄── lock-released (cardId) ──────────┼─── lock-released (cardId) ────────►│ (Card unlocked)
 ```
 
-### WebSocket Event Reference
-
 | Event | Direction | Payload | Description |
 | :--- | :--- | :--- | :--- |
-| `join-board` | Client $\to$ Server | `{ boardId, userId }` | Joins a specific board room. |
-| `claim-lock` | Client $\to$ Server | `{ boardId, cardId, userId }` | Requests exclusive edit access for a card. |
-| `lock-acquired` | Server $\to$ Room | `{ cardId, lock }` | Broadcasted when a lock is successfully claimed. |
-| `lock-failed` | Server $\to$ Client | `{ cardId, reason, currentLock }` | Notifies requester that the card is already locked. |
-| `release-lock` | Client $\to$ Server | `{ boardId, cardId, userId }` | Releases the card lock explicitly. |
-| `lock-released` | Server $\to$ Room | `{ cardId }` | Broadcasted when a lock is freed. |
+| `join-board` | Client → Server | `{ boardId, userId }` | Joins a specific board room. |
+| `claim-lock` | Client → Server | `{ boardId, cardId, userId }` | Requests exclusive edit access for a card. |
+| `lock-acquired` | Server → Room | `{ cardId, lock }` | Broadcasted when a lock is successfully claimed. |
+| `lock-failed` | Server → Client | `{ cardId, reason, currentLock }` | Notifies requester that the card is already locked. |
+| `release-lock` | Client → Server | `{ boardId, cardId, userId }` | Releases the card lock explicitly. |
+| `lock-released` | Server → Room | `{ cardId }` | Broadcasted when a lock is freed. |
 
----
+## Testing locally
 
-## 🚀 Getting Started
+1. Open `http://localhost:3000` in a regular browser window and pick a user (Alice).
+2. Open the same URL in an incognito window and pick a different user (Bob).
+3. Open a card as Alice, then try opening the same card as Bob.
+4. Bob's screen should update instantly, showing the card locked by Alice.
+5. Trying to open the card as Bob shows a lock conflict.
+6. Close Alice's modal (or wait for the 60s TTL) and the card unlocks for Bob.
 
-### Prerequisites
-- **Node.js**: (v20+ recommended)
-- **Package Manager**: npm or pnpm
-- **Database**: PostgreSQL database URL (e.g., Neon DB)
+## What I know still isn't right
 
-### 1. Backend Setup
+- The lock currently only lives on the WebSocket side. The REST update route (`PATCH /cards/:id`) doesn't check whether the caller actually holds the lock before writing. That's the next thing to fix.
+- `acquireLock` reads the existing lock and then upserts in two separate steps, so it's not fully atomic under a race. A DB-level constraint would close that gap.
+- No real authentication. `userId` comes straight from the client payload.
+- If the same user has two tabs open, closing one releases the lock the other tab might still be relying on. Not handled yet.
 
-Navigate to the backend directory:
+## Setup
+
+### Backend
+
 ```bash
 cd backend
-```
-
-Install dependencies:
-```bash
 npm install
 ```
 
-Configure your `.env` file in `backend/.env`:
+Create `backend/.env`:
+
 ```env
 DATABASE_URL="postgresql://user:password@ep-example.pooler.neon.tech/neondb?sslmode=require"
 PORT=4000
 ```
 
-Run database migrations:
 ```bash
 npx prisma migrate dev --name init
-```
-
-Seed the database with initial users, board, and cards:
-```bash
 npx prisma db seed
-```
-
-Start the backend development server:
-```bash
 npm run dev
 ```
 
-The server will run at `http://localhost:4000`.
+Server runs at `http://localhost:4000`.
 
-### 2. Frontend Setup
+### Frontend
 
-Navigate to the frontend directory:
 ```bash
 cd frontend
-```
-
-Install dependencies:
-```bash
 npm install
 ```
 
-Set up environment variables in `frontend/.env.local`:
+Create `frontend/.env.local`:
+
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:4000"
 NEXT_PUBLIC_WS_URL="http://localhost:4000"
 ```
 
-Start the Next.js development server:
 ```bash
 npm run dev
 ```
 
-The app will run at `http://localhost:3000`.
-
----
-
-## 🧪 Testing Concurrency Locally
-
-1. Open `http://localhost:3000` in a browser window and select **Alice**.
-2. Open `http://localhost:3000` in an incognito window and select **Bob**.
-3. Click on any card with **Alice** to open the edit modal.
-4. Notice **Bob's** screen instantly updates with a lock badge showing *Locked by Alice*.
-5. Attempting to click the card with **Bob** will display a lock conflict alert.
-6. Close **Alice's** modal or wait 30 seconds for the TTL to expire — the card unlocks immediately for **Bob**.
+App runs at `http://localhost:3000`.
