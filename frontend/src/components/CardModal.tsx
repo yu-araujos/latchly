@@ -35,7 +35,7 @@ export default function CardModal({
     if (!card) return;
     setTitle(card.title);
     setDescription(card.description ?? "");
-  }, [card]);
+  }, [card?.id, card?.title, card?.description]);
 
   useEffect(() => {
     if (!isOpen || !card || isLockedByOtherUser) return;
@@ -54,7 +54,7 @@ export default function CardModal({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, onClose, card, isLockedByOtherUser]);
+  }, [isOpen, onClose, card?.id, isLockedByOtherUser]);
 
   async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
@@ -153,7 +153,7 @@ export default function CardModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isLockedByOtherUser}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all min-h-[110px] resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all min-h-27.5 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Add details about this task..."
             ></textarea>
           </div>

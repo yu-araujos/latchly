@@ -175,18 +175,22 @@ export function useBoardSocket(
     };
   }, [boardId, userId]);
 
-  function claimLock(cardId: string) {
+  function claimLock(cardId: string, currentUserId: string) {
     if (!clientSocket.current) return;
 
-    return clientSocket.current.emit("claim-lock", { boardId, cardId, userId });
+    return clientSocket.current.emit("claim-lock", {
+      boardId,
+      cardId,
+      userId: currentUserId,
+    });
   }
 
-  function releaseLock(cardId: string) {
+  function releaseLock(cardId: string, currentUserId: string) {
     if (!clientSocket.current) return;
     return clientSocket.current.emit("release-lock", {
       boardId,
       cardId,
-      userId,
+      userId: currentUserId,
     });
   }
 

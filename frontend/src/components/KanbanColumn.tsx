@@ -81,7 +81,7 @@ export default function KanbanColumn({
   };
 
   return (
-    <div className="w-80 flex-shrink-0 bg-slate-200/80 backdrop-blur-md rounded-2xl p-4 border border-slate-300/80 shadow-sm flex flex-col max-h-[calc(100vh-9rem)]">
+    <div className="w-80 shrink-0 bg-slate-200/80 backdrop-blur-md rounded-2xl p-4 border border-slate-300/80 shadow-sm flex flex-col max-h-[calc(100vh-9rem)]">
       <div className="group flex items-center justify-between mb-4 pb-3 border-b border-slate-300/70">
         <div className="flex items-center gap-2 flex-1 mr-2 min-w-0">
           {getColumnIcon(column.title)}
@@ -116,13 +116,13 @@ export default function KanbanColumn({
               {column.title}
             </h2>
           )}
+
+          <span className="bg-slate-300/70 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-slate-400/30 shrink-0">
+            {column.cards.length}
+          </span>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="bg-slate-300/70 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-slate-400/30">
-            {column.cards.length}
-          </span>
-
           <button
             onClick={() => onAddCard(column.id)}
             className="text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
@@ -156,7 +156,7 @@ export default function KanbanColumn({
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-[120px]"
+            className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-30"
           >
             {column.cards.map((card, index) => (
               <KanbanCard

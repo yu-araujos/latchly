@@ -53,6 +53,8 @@ export async function acquireLock(
       },
     });
 
+    console.log("[claim-lock]", { cardId, userId, socketId });
+
     return {
       success: true,
       lock,

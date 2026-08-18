@@ -31,7 +31,7 @@ export default function Header({ selectedUserId, onSelectUser }: HeaderProps) {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand / Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-sm flex items-center justify-center">
+          <div className="h-9 w-9 rounded-xl bg-linear-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-sm flex items-center justify-center">
             <div className="h-full w-full bg-white rounded-[10px] flex items-center justify-center">
               <Kanban className="w-4.5 h-4.5 text-indigo-600" />
             </div>

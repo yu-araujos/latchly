@@ -45,7 +45,7 @@ export default function AddColumnButton({ onAdd }: AddColumnButtonProps) {
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className="w-80 flex-shrink-0 h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-white/80 transition-all flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 font-semibold cursor-pointer shadow-xs"
+        className="w-80 shrink-0 h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-white/80 transition-all flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 font-semibold cursor-pointer shadow-xs"
       >
         <Plus className="w-5 h-5" />
         <span>Add Column</span>
@@ -54,7 +54,7 @@ export default function AddColumnButton({ onAdd }: AddColumnButtonProps) {
   }
 
   return (
-    <div className="w-80 flex-shrink-0 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
+    <div className="w-80 shrink-0 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           ref={inputRef}

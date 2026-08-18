@@ -39,6 +39,12 @@ export default function Home() {
     setBoard,
   );
 
+  const currentCard = editingCard
+    ? (board?.columns
+        .flatMap((c) => c.cards)
+        .find((c) => c.id === editingCard.id) ?? editingCard)
+    : null;
+
   useEffect(() => {
     async function loadBoard() {
       try {
@@ -68,7 +74,7 @@ export default function Home() {
     );
 
     if (!isLockedByOtherUser) {
-      claimLock(cardId);
+      claimLock(cardId, selectedUserId);
     }
 
     setEditingCard(cardFounded);
@@ -80,7 +86,7 @@ export default function Home() {
     );
 
     if (editingCard && !isLockedByOtherUser) {
-      releaseLock(editingCard.id);
+      releaseLock(editingCard.id, selectedUserId);
     }
     setEditingCard(null);
     setCreatingColumnId(null);
@@ -294,7 +300,7 @@ export default function Home() {
   }
 
   return (
-    <main className="h-screen bg-gradient-to-br from-indigo-50/70 via-slate-100 to-sky-50 text-slate-800 flex flex-col font-sans antialiased overflow-hidden">
+    <main className="h-screen bg-linear-to-br from-indigo-50/70 via-slate-100 to-sky-50 text-slate-800 flex flex-col font-sans antialiased overflow-hidden">
       <Header
         selectedUserId={selectedUserId}
         onSelectUser={setSelectedUserId}
@@ -319,7 +325,7 @@ export default function Home() {
 
         {Boolean(editingCard || creatingColumnId) && (
           <CardModal
-            card={editingCard}
+            card={currentCard}
             isOpen={Boolean(editingCard || creatingColumnId)}
             currentUserId={selectedUserId}
             onClose={handleCloseEdit}
