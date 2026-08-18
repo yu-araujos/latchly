@@ -1,10 +1,11 @@
 import { Card } from "@/types/kanban";
 import React, { useEffect, useState } from "react";
-import { Clock, Edit3, Save, X } from "lucide-react";
+import { Clock, Edit3, Lock, Save, X } from "lucide-react";
 
 interface CardModalProps {
   card: Card;
   isOpen: boolean;
+  currentUserId: string;
   onClose: () => void;
   onSave: (data: { title: string; description: string }) => void;
 }
@@ -12,6 +13,7 @@ interface CardModalProps {
 export default function CardModal({
   card,
   isOpen,
+  currentUserId,
   onClose,
   onSave,
 }: CardModalProps) {
@@ -19,6 +21,9 @@ export default function CardModal({
   const [description, setDescription] = useState(card.description ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const isLockedByOtherUser = Boolean(
+    card.lock && card.lock.userId !== currentUserId,
+  );
 
   useEffect(() => {
     if (!card) return;
@@ -27,7 +32,7 @@ export default function CardModal({
   }, [card]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isLockedByOtherUser) return;
 
     setTimeLeft(60);
 
@@ -67,24 +72,40 @@ export default function CardModal({
       <div className="bg-white border border-slate-200/90 text-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-lg relative space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
-              <Edit3 className="w-4 h-4" />
+            <div
+              className={`p-2 rounded-xl border ${
+                isLockedByOtherUser
+                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                  : "bg-indigo-50 text-indigo-600 border-indigo-100"
+              }`}
+            >
+              {isLockedByOtherUser ? (
+                <Lock className="w-4 h-4" />
+              ) : (
+                <Edit3 className="w-4 h-4" />
+              )}
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Editing Card
+                {isLockedByOtherUser
+                  ? "Viewing Card (Read-Only)"
+                  : "Editing Card"}
               </h2>
               <p className="text-xs text-slate-500">
-                Exclusive lock active for this session
+                {isLockedByOtherUser
+                  ? `Currently being edited by ${card.lock?.user?.name || "another user"}`
+                  : "Exclusive lock active for this session"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full text-xs font-semibold font-mono flex items-center gap-1.5 shadow-xs">
-              <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-              <span>{timeLeft}s</span>
-            </div>
+            {!isLockedByOtherUser && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full text-xs font-semibold font-mono flex items-center gap-1.5 shadow-xs">
+                <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                <span>{timeLeft}s</span>
+              </div>
+            )}
 
             <button
               type="button"
@@ -105,7 +126,8 @@ export default function CardModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+              disabled={isLockedByOtherUser}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Card title..."
             />
           </div>
@@ -117,7 +139,8 @@ export default function CardModal({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all min-h-[110px] resize-none"
+              disabled={isLockedByOtherUser}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all min-h-[110px] resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Add details about this task..."
             ></textarea>
           </div>
@@ -128,16 +151,19 @@ export default function CardModal({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-sm font-medium transition-colors"
             >
-              Cancel
+              {isLockedByOtherUser ? "Close" : "Cancel"}
             </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
+
+            {!isLockedByOtherUser && (
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            )}
           </div>
         </form>
       </div>

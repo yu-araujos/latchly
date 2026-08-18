@@ -44,14 +44,27 @@ export default function Home() {
 
     if (!cardFounded) return;
 
-    claimLock(cardId);
+    const isLockedByOtherUser = Boolean(
+      cardFounded.lock && cardFounded.lock.userId !== selectedUserId,
+    );
+
+    if (!isLockedByOtherUser) {
+      claimLock(cardId);
+    }
+
     setEditingCard(cardFounded);
   }
 
   function handleCloseEdit() {
     if (!editingCard) return;
 
-    releaseLock(editingCard.id);
+    const isLockedByOtherUser = Boolean(
+      editingCard.lock && editingCard.lock.userId !== selectedUserId,
+    );
+
+    if (!isLockedByOtherUser) {
+      releaseLock(editingCard.id);
+    }
     setEditingCard(null);
   }
 
@@ -110,6 +123,7 @@ export default function Home() {
         <CardModal
           card={editingCard}
           isOpen={Boolean(editingCard)}
+          currentUserId={selectedUserId}
           onClose={handleCloseEdit}
           onSave={handleSaveCard}
         />

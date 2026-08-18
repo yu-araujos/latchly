@@ -21,7 +21,6 @@ export default function KanbanCard({
   );
 
   function handleClick() {
-    if (isLockedByOther) return;
     onCardClick(card.id);
   }
 
@@ -35,7 +34,7 @@ export default function KanbanCard({
         isLockedByMe
           ? "border-indigo-500/90 bg-indigo-50/70 shadow-md shadow-indigo-500/10 ring-2 ring-indigo-500/30"
           : isLockedByOther
-            ? "border-amber-400/90 bg-amber-50/70 opacity-90 border-dashed cursor-not-allowed ring-1 ring-amber-400/30"
+            ? "border-amber-400/90 bg-amber-50/70 opacity-90 border-dashed cursor-pointer ring-1 ring-amber-400/30"
             : "border-slate-200/90 bg-white hover:border-indigo-300 shadow-xs hover:shadow-md cursor-pointer"
       }`}
     >
