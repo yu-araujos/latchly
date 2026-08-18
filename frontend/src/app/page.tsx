@@ -4,7 +4,7 @@ import CardModal from "@/components/CardModal";
 import Header from "@/components/Header";
 import KanbanColumn from "@/components/KanbanColumn";
 import { useBoardSocket } from "@/hooks/useBoardSocket";
-import { fetchBoard, updateCard } from "@/lib/api";
+import { createCard, fetchBoard, updateCard } from "@/lib/api";
 import { Board, Card } from "@/types/kanban";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -18,6 +18,7 @@ export default function Home() {
   );
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingColumnId, setCreatingColumnId] = useState<string | null>(null);
 
   const { claimLock, releaseLock } = useBoardSocket(
     BOARD_ID,
@@ -36,6 +37,11 @@ export default function Home() {
     }
     loadBoard();
   }, []);
+
+  function handleCreate(columnId: string) {
+    setEditingCard(null);
+    setCreatingColumnId(columnId);
+  }
 
   function handleOpenEdit(cardId: string) {
     const cardFounded = board?.columns
@@ -56,38 +62,65 @@ export default function Home() {
   }
 
   function handleCloseEdit() {
-    if (!editingCard) return;
-
     const isLockedByOtherUser = Boolean(
-      editingCard.lock && editingCard.lock.userId !== selectedUserId,
+      editingCard?.lock && editingCard?.lock.userId !== selectedUserId,
     );
 
-    if (!isLockedByOtherUser) {
+    if (editingCard && !isLockedByOtherUser) {
       releaseLock(editingCard.id);
     }
     setEditingCard(null);
+    setCreatingColumnId(null);
   }
 
   async function handleSaveCard(data: { title: string; description: string }) {
-    if (!editingCard) return;
+    if (creatingColumnId) {
+      const newCard = await createCard({
+        columnId: creatingColumnId,
+        ...data,
+      });
 
-    const updatedCard = await updateCard(editingCard.id, data, selectedUserId);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => {
+            if (col.id === creatingColumnId) {
+              const alreadyExists = col.cards.some((c) => c.id === newCard.id);
+              if (alreadyExists) return col;
+              return { ...col, cards: [...col.cards, newCard] };
+            }
+            return col;
+          }),
+        };
+      });
 
-    setBoard((prev) => {
-      if (!prev) return prev;
+      setCreatingColumnId(null);
+      return;
+    }
 
-      return {
-        ...prev,
-        columns: prev.columns.map((col) => ({
-          ...col,
-          cards: col.cards.map((card) =>
-            card.id === updatedCard.id ? updatedCard : card,
-          ),
-        })),
-      };
-    });
+    if (editingCard) {
+      const updatedCard = await updateCard(
+        editingCard.id,
+        data,
+        selectedUserId,
+      );
 
-    setEditingCard(null);
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => ({
+            ...col,
+            cards: col.cards.map((card) =>
+              card.id === updatedCard.id ? updatedCard : card,
+            ),
+          })),
+        };
+      });
+
+      setEditingCard(null);
+    }
   }
 
   if (loading || !board) {
@@ -115,14 +148,15 @@ export default function Home() {
             column={col}
             currentUserId={selectedUserId}
             onCardClick={handleOpenEdit}
+            onAddCard={handleCreate}
           />
         ))}
       </div>
 
-      {editingCard && (
+      {Boolean(editingCard || creatingColumnId) && (
         <CardModal
           card={editingCard}
-          isOpen={Boolean(editingCard)}
+          isOpen={Boolean(editingCard || creatingColumnId)}
           currentUserId={selectedUserId}
           onClose={handleCloseEdit}
           onSave={handleSaveCard}

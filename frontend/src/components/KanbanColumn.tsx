@@ -2,18 +2,26 @@
 
 import { Column } from "@/types/kanban";
 import KanbanCard from "./KanbanCard";
-import { CheckCircle2, Clock, Layers, ListTodo } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Layers,
+  ListTodo,
+  PlusCircle,
+} from "lucide-react";
 
 interface KanbanColumnProps {
   column: Column;
   currentUserId: string;
   onCardClick: (cardId: string) => void;
+  onAddCard: (columnId: string) => void;
 }
 
 export default function KanbanColumn({
   column,
   currentUserId,
   onCardClick,
+  onAddCard,
 }: KanbanColumnProps) {
   const getColumnIcon = (title: string) => {
     const t = title.toLowerCase();
@@ -38,9 +46,18 @@ export default function KanbanColumn({
             {column.title}
           </h2>
         </div>
-        <span className="bg-slate-300/70 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-slate-400/30">
-          {column.cards.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="bg-slate-300/70 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-slate-400/30">
+            {column.cards.length}
+          </span>
+
+          <button
+            onClick={() => onAddCard(column.id)}
+            className="w-6 h-6 cursor-pointer"
+          >
+            <PlusCircle className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 overflow-y-auto pr-1">

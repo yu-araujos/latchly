@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import { Clock, Edit3, Lock, Save, X } from "lucide-react";
 
 interface CardModalProps {
-  card: Card;
+  card?: Card | null;
+  columnId?: string | null;
   isOpen: boolean;
   currentUserId: string;
   onClose: () => void;
@@ -17,13 +18,15 @@ export default function CardModal({
   onClose,
   onSave,
 }: CardModalProps) {
-  const [title, setTitle] = useState(card.title);
-  const [description, setDescription] = useState(card.description ?? "");
+  const [title, setTitle] = useState(card?.title ?? "");
+  const [description, setDescription] = useState(card?.description ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+
   const isLockedByOtherUser = Boolean(
-    card.lock && card.lock.userId !== currentUserId,
+    card?.lock && card?.lock.userId !== currentUserId,
   );
+  const isCreating = !card;
 
   useEffect(() => {
     if (!card) return;
@@ -32,7 +35,7 @@ export default function CardModal({
   }, [card]);
 
   useEffect(() => {
-    if (!isOpen || isLockedByOtherUser) return;
+    if (!isOpen || !card || isLockedByOtherUser) return;
 
     setTimeLeft(60);
 
@@ -89,18 +92,22 @@ export default function CardModal({
               <h2 className="text-base font-bold text-slate-900">
                 {isLockedByOtherUser
                   ? "Viewing Card (Read-Only)"
-                  : "Editing Card"}
+                  : isCreating
+                    ? "Create New Card"
+                    : "Editing Card"}
               </h2>
               <p className="text-xs text-slate-500">
                 {isLockedByOtherUser
-                  ? `Currently being edited by ${card.lock?.user?.name || "another user"}`
-                  : "Exclusive lock active for this session"}
+                  ? `Currently being edited by ${card?.lock?.user?.name || "another user"}`
+                  : isCreating
+                    ? "Add a new task to this board"
+                    : "Exclusive lock active for this session"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {!isLockedByOtherUser && (
+            {!isLockedByOtherUser && !isCreating && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full text-xs font-semibold font-mono flex items-center gap-1.5 shadow-xs">
                 <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
                 <span>{timeLeft}s</span>
@@ -157,11 +164,17 @@ export default function CardModal({
             {!isLockedByOtherUser && (
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || !title.trim()}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving
+                  ? isCreating
+                    ? "Creating..."
+                    : "Saving..."
+                  : isCreating
+                    ? "Create Card"
+                    : "Save Changes"}
               </button>
             )}
           </div>

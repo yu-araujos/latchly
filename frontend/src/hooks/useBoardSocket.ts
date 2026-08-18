@@ -18,6 +18,26 @@ export function useBoardSocket(
 
     socket.emit("join-board", { boardId, userId });
 
+    socket.on("card-created", ({ card }: { card: Card }) => {
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((col) => {
+            if (col.id === card.columnId) {
+              const alreadyExists = col.cards.some((c) => c.id === card.id);
+              if (alreadyExists) return col;
+              return {
+                ...col,
+                cards: [...col.cards, card],
+              };
+            }
+            return col;
+          }),
+        };
+      });
+    });
+
     socket.on("lock-acquired", ({ cardId, lock }) => {
       setBoard((prevBoard) => {
         if (!prevBoard) return null;
@@ -53,7 +73,6 @@ export function useBoardSocket(
     });
 
     socket.on("card-updated", ({ card }: { card: Card }) => {
-      console.log("[useBoardSocket] card-updated received:", card);
       setBoard((prev) => {
         if (!prev) return prev;
         return {
