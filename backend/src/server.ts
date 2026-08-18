@@ -9,6 +9,7 @@ import {
   releaseLock,
   releaseLocksBySocket,
 } from "./services/lock.service";
+import { columnRoutes } from "./routes/column.routes";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use("/boards", boardRoutes);
 app.use("/cards", cardRoutes);
+app.use("/columns", columnRoutes);
 
 const httpServer = http.createServer(app);
 
