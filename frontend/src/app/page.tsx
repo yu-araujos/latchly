@@ -7,6 +7,7 @@ import { useBoardSocket } from "@/hooks/useBoardSocket";
 import { fetchBoard, updateCard } from "@/lib/api";
 import { Board, Card } from "@/types/kanban";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 const BOARD_ID = "7035e33a-1277-4a81-9932-d654bd7eb64d";
 
@@ -78,20 +79,21 @@ export default function Home() {
 
   if (loading || !board) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-zinc-400 font-medium">Loading board...</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <p className="text-slate-600 font-medium text-sm">Loading Latchly board...</p>
       </div>
     );
   }
 
   return (
-    <main>
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50/70 via-slate-100 to-sky-50 text-slate-800 flex flex-col font-sans antialiased">
       <Header
         selectedUserId={selectedUserId}
         onSelectUser={setSelectedUserId}
       />
 
-      <div className="flex gap-6 overflow-x-auto p-6 items-start">
+      <div className="flex-1 flex gap-6 overflow-x-auto p-6 items-start max-w-7xl mx-auto w-full">
         {board?.columns.map((col) => (
           <KanbanColumn
             key={col.id}
@@ -113,3 +115,5 @@ export default function Home() {
     </main>
   );
 }
+
+
