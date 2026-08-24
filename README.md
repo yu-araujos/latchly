@@ -1,8 +1,6 @@
 # 🔒 Latchly
 
-A real-time collaborative Kanban board built to solve one specific problem: what happens when two people try to edit or move the same card at the same time.
-
-I built this after running into a similar problem at work (concurrent edit conflicts on an invoicing platform). I wanted to rebuild the logic from scratch, without reusing anything from that codebase, to actually understand the decisions involved rather than just having solved it once under deadline pressure.
+A real-time collaborative Kanban board built to explore one specific problem: what happens when two users try to edit or move the same card at the same time?
 
 ## Features
 
@@ -15,7 +13,7 @@ I built this after running into a similar problem at work (concurrent edit confl
 
 When a user opens a card to edit it, the backend registers a lock with a 60-second TTL and notifies everyone connected via WebSocket. While the lock is active, other users see the card as locked in real time. If the person closes the tab or loses connection, the lock is released along with it.
 
-I went with pessimistic locking (rather than optimistic, where you resolve conflicts after they happen) because I wanted to simplify the user experience: better to warn someone upfront than ask them to merge changes after the fact.
+Pessimistic locking was chosen over optimistic locking (where conflicts are resolved after they happen) because it simplifies the user experience: better to warn someone upfront than ask them to merge changes after the fact.
 
 ## Architecture & Trade-offs
 
@@ -45,22 +43,6 @@ User A (Client)               Backend (Socket.io + Postgres)              User B
       │                                     ├── [Deletes CardLock record]        │
       │◄── lock-released (cardId) ──────────┼─── lock-released (cardId) ────────►│ (Card unlocked)
 ```
-
-| Event | Direction | Payload | Description |
-| :--- | :--- | :--- | :--- |
-| `join-board` | Client → Server | `{ boardId, userId }` | Joins a specific board room. |
-| `claim-lock` | Client → Server | `{ boardId, cardId, userId }` | Requests exclusive edit access for a card. |
-| `lock-acquired` | Server → Room | `{ cardId, lock }` | Broadcasted when a lock is successfully claimed. |
-| `lock-failed` | Server → Client | `{ cardId, reason, currentLock }` | Notifies requester that the card is already locked. |
-| `release-lock` | Client → Server | `{ boardId, cardId, userId }` | Releases the card lock explicitly. |
-| `lock-released` | Server → Room | `{ cardId }` | Broadcasted when a lock is freed. |
-| `card-created` | Server → Room | `{ card }` | Broadcasted when a new card is created. |
-| `card-updated` | Server → Room | `{ card }` | Broadcasted when a card's details are saved. |
-| `card-moved` | Server → Room | `{ card }` | Broadcasted when a card is dragged to a new position/column. |
-| `card-deleted` | Server → Room | `{ cardId, columnId }` | Broadcasted when a card is removed. |
-| `column-created` | Server → Room | `{ column }` | Broadcasted when a new column is added. |
-| `column-updated` | Server → Room | `{ column }` | Broadcasted when a column title is renamed. |
-| `column-deleted` | Server → Room | `{ columnId }` | Broadcasted when a column is deleted. |
 
 ## Testing locally
 
