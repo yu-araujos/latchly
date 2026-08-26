@@ -44,7 +44,7 @@ async function main() {
                 },
                 {
                   title: "Configure lock expiration with TTL",
-                  description: "Ensure idle locks expire after 30 seconds.",
+                  description: "Ensure idle locks expire after 60 seconds.",
                   position: 1,
                 },
               ],
