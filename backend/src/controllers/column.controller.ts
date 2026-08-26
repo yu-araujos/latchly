@@ -107,24 +107,7 @@ export async function deleteColumn(
       return res.status(404).json({ error: "Column not found" });
     }
 
-    const cards = await prisma.card.findMany({
-      where: { columnId: id },
-      select: { id: true },
-    });
-
-    const cardIds = cards.map((c: { id: string }) => c.id);
-
-    await prisma.$transaction([
-      prisma.cardLock.deleteMany({
-        where: { cardId: { in: cardIds } },
-      }),
-      prisma.card.deleteMany({
-        where: { columnId: id },
-      }),
-      prisma.column.delete({
-        where: { id },
-      }),
-    ]);
+    await prisma.column.delete({ where: { id } });
 
     const io = req.app.get("io");
     if (io && column.boardId) {
