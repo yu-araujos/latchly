@@ -1,13 +1,18 @@
 import { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { isLockedByOther } from "../lib/lock.helpers";
 
 export async function createCard(req: Request, res: Response) {
   try {
     const { columnId, title, description } = req.body;
 
-    if (!columnId || !title || !title.trim()) {
-      return res.status(400).json({ error: "Missing columnId or title" });
+    if (!columnId || typeof columnId !== "string") {
+      return res.status(400).json({ error: "columnId is required" });
+    }
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+      return res.status(400).json({ error: "title is required" });
     }
 
     const lastCard = await prisma.card.findFirst({
@@ -21,7 +26,10 @@ export async function createCard(req: Request, res: Response) {
       data: {
         columnId,
         title: title.trim(),
-        description: description ? description.trim() : null,
+        description:
+          description && typeof description === "string"
+            ? description.trim()
+            : null,
         position,
       },
       include: {
@@ -57,6 +65,17 @@ export async function updateCard(req: Request<{ id: string }>, res: Response) {
     const { id: cardId } = req.params;
     const { title, description, userId } = req.body;
 
+    if (!userId || typeof userId !== "string") {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
+    if (
+      title !== undefined &&
+      (typeof title !== "string" || !title.trim())
+    ) {
+      return res.status(400).json({ error: "title cannot be empty" });
+    }
+
     const existingCard = await prisma.card.findUnique({
       where: { id: cardId },
       include: { lock: true, column: { select: { boardId: true } } },
@@ -66,20 +85,15 @@ export async function updateCard(req: Request<{ id: string }>, res: Response) {
       return res.status(404).json({ error: "Card not found" });
     }
 
-    const now = new Date();
-    const isLockedByOther =
-      existingCard.lock &&
-      existingCard.lock.userId !== userId &&
-      existingCard.lock.expiresAt > now;
-
-    if (isLockedByOther) {
+    if (isLockedByOther(existingCard.lock, userId)) {
       return res.status(423).json({ error: "Card is locked by another user" });
     }
 
     const updatedCard = await prisma.card.update({
       where: { id: cardId },
       data: {
-        title: title !== undefined ? title.trim() : existingCard.title,
+        title:
+          title !== undefined ? title.trim() : existingCard.title,
         description:
           description !== undefined
             ? description.trim()
@@ -115,96 +129,102 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
     const { id: cardId } = req.params;
     const { targetColumnId, newPosition, userId } = req.body;
 
-    if (!targetColumnId || typeof newPosition !== "number" || !userId) {
-      return res
-        .status(400)
-        .json({ error: "Missing required move parameters" });
+    if (!userId || typeof userId !== "string") {
+      return res.status(400).json({ error: "userId is required" });
     }
 
-    const updatedCard = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const card = await tx.card.findUnique({
-        where: { id: cardId },
-        include: { lock: true },
-      });
+    if (!targetColumnId || typeof targetColumnId !== "string") {
+      return res.status(400).json({ error: "targetColumnId is required" });
+    }
 
-      if (!card) {
-        throw new Error("CARD_NOT_FOUND");
-      }
+    if (typeof newPosition !== "number" || newPosition < 0) {
+      return res
+        .status(400)
+        .json({ error: "newPosition must be a non-negative number" });
+    }
 
-      const now = new Date();
-      const isLockedByOther =
-        card.lock && card.lock.userId !== userId && card.lock.expiresAt > now;
+    const updatedCard = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const card = await tx.card.findUnique({
+          where: { id: cardId },
+          include: { lock: true },
+        });
 
-      if (isLockedByOther) {
-        throw new Error("CARD_LOCKED");
-      }
+        if (!card) {
+          throw new Error("CARD_NOT_FOUND");
+        }
 
-      const sourceColumnId = card.columnId;
-      const oldPosition = card.position;
+        if (isLockedByOther(card.lock, userId)) {
+          throw new Error("CARD_LOCKED");
+        }
 
-      if (sourceColumnId === targetColumnId) {
-        if (newPosition > oldPosition) {
+        const sourceColumnId = card.columnId;
+        const oldPosition = card.position;
+
+        if (sourceColumnId === targetColumnId) {
+          if (newPosition > oldPosition) {
+            await tx.card.updateMany({
+              where: {
+                columnId: sourceColumnId,
+                id: { not: cardId },
+                position: {
+                  gt: oldPosition,
+                  lte: newPosition,
+                },
+              },
+              data: { position: { decrement: 1 } },
+            });
+          } else if (newPosition < oldPosition) {
+            await tx.card.updateMany({
+              where: {
+                columnId: sourceColumnId,
+                id: { not: cardId },
+                position: {
+                  gte: newPosition,
+                  lt: oldPosition,
+                },
+              },
+              data: { position: { increment: 1 } },
+            });
+          }
+        } else {
           await tx.card.updateMany({
             where: {
               columnId: sourceColumnId,
               id: { not: cardId },
-              position: {
-                gt: oldPosition,
-                lte: newPosition,
-              },
+              position: { gt: oldPosition },
             },
             data: { position: { decrement: 1 } },
           });
-        } else if (newPosition < oldPosition) {
+
           await tx.card.updateMany({
             where: {
-              columnId: sourceColumnId,
+              columnId: targetColumnId,
               id: { not: cardId },
-              position: {
-                gte: newPosition,
-                lt: oldPosition,
-              },
+              position: { gte: newPosition },
             },
             data: { position: { increment: 1 } },
           });
         }
-      } else {
-        await tx.card.updateMany({
-          where: {
-            columnId: sourceColumnId,
-            id: { not: cardId },
-            position: { gt: oldPosition },
-          },
-          data: { position: { decrement: 1 } },
-        });
 
-        await tx.card.updateMany({
-          where: {
+        return await tx.card.update({
+          where: { id: cardId },
+          data: {
             columnId: targetColumnId,
-            id: { not: cardId },
-            position: { gte: newPosition },
+            position: newPosition,
           },
-          data: { position: { increment: 1 } },
-        });
-      }
-
-      return await tx.card.update({
-        where: { id: cardId },
-        data: {
-          columnId: targetColumnId,
-          position: newPosition,
-        },
-        include: {
-          lock: {
-            include: {
-              user: {
-                select: { id: true, name: true, avatarUrl: true },
+          include: {
+            lock: {
+              include: {
+                user: {
+                  select: { id: true, name: true, avatarUrl: true },
+                },
               },
             },
           },
-        },
-      });
-    });
+        });
+      },
+    );
 
     const column = await prisma.column.findUnique({
       where: { id: targetColumnId },
@@ -220,7 +240,9 @@ export async function moveCard(req: Request<{ id: string }>, res: Response) {
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "CARD_LOCKED") {
-        return res.status(423).json({ error: "Card is locked by another user" });
+        return res
+          .status(423)
+          .json({ error: "Card is locked by another user" });
       }
       if (error.message === "CARD_NOT_FOUND") {
         return res.status(404).json({ error: "Card not found" });
@@ -237,6 +259,10 @@ export async function deleteCard(req: Request<{ id: string }>, res: Response) {
     const { id: cardId } = req.params;
     const { userId } = req.body;
 
+    if (!userId || typeof userId !== "string") {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
     const card = await prisma.card.findUnique({
       where: { id: cardId },
       include: {
@@ -249,11 +275,7 @@ export async function deleteCard(req: Request<{ id: string }>, res: Response) {
       return res.status(404).json({ error: "Card not found" });
     }
 
-    const now = new Date();
-    const isLockedByOther =
-      card.lock && card.lock.userId !== userId && card.lock.expiresAt > now;
-
-    if (isLockedByOther) {
+    if (isLockedByOther(card.lock, userId)) {
       return res.status(423).json({ error: "Card is locked by another user" });
     }
 
