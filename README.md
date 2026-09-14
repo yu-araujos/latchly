@@ -25,7 +25,7 @@ In a production environment, this value would be strictly extracted and verified
 
 ### No Automated Tests (Known Limitation)
 
-This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Coverage for the locking transactions (`acquireLock`, `moveCard`) would be the first addition before treating this as production-ready.
+This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Automated testing and CI are deliberately out of scope here and are being explored in a separate project instead.
 
 ## Stack
 
