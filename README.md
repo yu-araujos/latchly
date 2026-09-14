@@ -2,7 +2,7 @@
 
 A real-time collaborative Kanban board built to explore one specific problem: what happens when two users try to edit or move the same card at the same time?
 
-<video src="https://github.com/user-attachments/assets/a44bbb82-5b75-4343-a7c7-1501509bef70"  alt="Latchly Demo" controls></video>
+<video src="[ents/assets/a44bbb82-5b75-4343-a7c7-1501509bef70](https://github.com/user-attachments/assets/26375eaa-27d7-4c0a-bab4-00fe6b2f5d06)"  alt="Latchly Demo" controls></video>
 
 ## Features
 
@@ -27,7 +27,7 @@ In a production environment, this value would be strictly extracted and verified
 
 ### No Automated Tests (Known Limitation)
 
-This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Coverage for the locking transactions (`acquireLock`, `moveCard`) would be the first addition before treating this as production-ready.
+This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Automated testing and CI are deliberately out of scope here and are being explored in a separate project instead.
 
 ## Stack
 
