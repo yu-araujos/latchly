@@ -2,7 +2,7 @@
 
 A real-time collaborative Kanban board built to explore one specific problem: what happens when two users try to edit or move the same card at the same time?
 
-<video src="[ents/assets/a44bbb82-5b75-4343-a7c7-1501509bef70](https://github.com/user-attachments/assets/26375eaa-27d7-4c0a-bab4-00fe6b2f5d06)"  alt="Latchly Demo" controls></video>
+<video src="https://github.com/user-attachments/assets/26375eaa-27d7-4c0a-bab4-00fe6b2f5d06"  alt="Latchly Demo" controls></video>
 
 ## Features
 
