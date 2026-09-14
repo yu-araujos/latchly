@@ -2,6 +2,8 @@
 
 A real-time collaborative Kanban board built to explore one specific problem: what happens when two users try to edit or move the same card at the same time?
 
+<img width="576" height="360" alt="3E8A12C7-0D22-4170-911C-86618762C942_4_5005_c" src="https://github.com/user-attachments/assets/a44bbb82-5b75-4343-a7c7-1501509bef70" />
+
 ## Features
 
 - **Pessimistic Concurrency Locks:** Opening a card registers a 60-second lock (TTL) backed by PostgreSQL & Socket.io.
