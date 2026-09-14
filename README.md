@@ -23,6 +23,10 @@ The WebSocket events and HTTP request payloads accept `userId` directly from the
 
 In a production environment, this value would be strictly extracted and verified from an authenticated session token (e.g., JWT, NextAuth, or IronSession) within Express middleware rather than trusted from the client payload.
 
+### No Automated Tests (Known Limitation)
+
+This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Coverage for the locking transactions (`acquireLock`, `moveCard`) would be the first addition before treating this as production-ready.
+
 ## Stack
 
 - **Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM
