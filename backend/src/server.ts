@@ -108,23 +108,27 @@ io.on("connection", (socket) => {
   );
 
   socket.on("disconnect", async () => {
-    const meta = socketMetadata.get(socket.id);
+    try {
+      const meta = socketMetadata.get(socket.id);
 
-    if (meta) {
-      console.log(
-        `[Socket] User ${meta.userId} disconnected, cleaning up locks...`,
-      );
+      if (meta) {
+        console.log(
+          `[Socket] User ${meta.userId} disconnected, cleaning up locks...`,
+        );
 
-      const releasedCardIds = await releaseLocksBySocket(socket.id);
+        const releasedCardIds = await releaseLocksBySocket(socket.id);
 
-      for (const cardId of releasedCardIds) {
-        io.to(meta.boardId).emit("lock-released", { cardId });
+        for (const cardId of releasedCardIds) {
+          io.to(meta.boardId).emit("lock-released", { cardId });
+        }
+
+        socketMetadata.delete(socket.id);
       }
 
-      socketMetadata.delete(socket.id);
+      console.log(`[Socket] Client disconnected: ${socket.id}`);
+    } catch (error) {
+      console.error("[Socket.disconnect] Error:", error);
     }
-
-    console.log(`[Socket] Client disconnected: ${socket.id}`);
   });
 });
 

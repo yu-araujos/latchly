@@ -2,6 +2,7 @@
 
 import { User } from "@/types/kanban";
 import { Kanban } from "lucide-react";
+import Image from "next/image";
 
 interface HeaderProps {
   selectedUserId: string;
@@ -29,7 +30,6 @@ export default function Header({ selectedUserId, onSelectUser }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand / Logo */}
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-xl bg-linear-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-sm flex items-center justify-center">
             <div className="h-full w-full bg-white rounded-[10px] flex items-center justify-center">
@@ -41,13 +41,17 @@ export default function Header({ selectedUserId, onSelectUser }: HeaderProps) {
           </h1>
         </div>
 
-        {/* User Switcher */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={selectedUser.avatarUrl}
+            <Image
+              src={
+                selectedUser.avatarUrl ??
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUser.name}`
+              }
               alt={selectedUser.name}
+              width={24}
+              height={24}
+              unoptimized
               className="w-6 h-6 rounded-full border border-slate-200"
             />
             <span className="text-xs text-slate-500 font-medium hidden sm:inline">

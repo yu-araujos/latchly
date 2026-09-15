@@ -173,7 +173,7 @@ export function useBoardSocket(
       socket.off("column-deleted");
       socket.disconnect();
     };
-  }, [boardId, userId]);
+  }, [boardId, userId, url, setBoard]);
 
   function claimLock(cardId: string, currentUserId: string) {
     if (!clientSocket.current) return;

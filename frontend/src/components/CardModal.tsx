@@ -31,16 +31,28 @@ export default function CardModal({
   );
   const isCreating = !card;
 
-  useEffect(() => {
-    if (!card) return;
-    setTitle(card.title);
-    setDescription(card.description ?? "");
-  }, [card?.id, card?.title, card?.description]);
+  const [prevCard, setPrevCard] = useState(card);
+  if (
+    card?.id !== prevCard?.id ||
+    card?.title !== prevCard?.title ||
+    card?.description !== prevCard?.description
+  ) {
+    setPrevCard(card);
+    if (card) {
+      setTitle(card.title);
+      setDescription(card.description ?? "");
+    }
+  }
+
+  const timerResetKey = `${isOpen}:${card?.id}:${isLockedByOtherUser}`;
+  const [prevTimerResetKey, setPrevTimerResetKey] = useState(timerResetKey);
+  if (timerResetKey !== prevTimerResetKey) {
+    setPrevTimerResetKey(timerResetKey);
+    setTimeLeft(60);
+  }
 
   useEffect(() => {
     if (!isOpen || !card || isLockedByOtherUser) return;
-
-    setTimeLeft(60);
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -54,7 +66,7 @@ export default function CardModal({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, onClose, card?.id, isLockedByOtherUser]);
+  }, [isOpen, onClose, card, isLockedByOtherUser]);
 
   async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
@@ -64,7 +76,7 @@ export default function CardModal({
     try {
       await onSave({ title, description });
       onClose();
-    } catch (error) {
+    } catch {
       toast.error("Card Locked", {
         description:
           "You cannot edit this card because it is currently locked by another user.",

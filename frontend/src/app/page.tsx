@@ -20,8 +20,7 @@ import { Loader2 } from "lucide-react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import AddColumnButton from "@/components/AddColumnButton";
 
-// Architectural Note: Using a fixed Board ID intentionally for the single-board real-time demo showcase.
-// The backend schema and socket rooms fully support dynamic multi-board routing via `/boards/[id]`.
+// Fixed on purpose for this single-board demo; backend/sockets already support multiple boards.
 const BOARD_ID = "7035e33a-1277-4a81-9932-d654bd7eb64d";
 
 export default function Home() {

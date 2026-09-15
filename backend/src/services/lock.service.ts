@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
-const LOCK_DURATION = 60 * 1000; //MS
+const LOCK_DURATION = 60 * 1000;
 
 interface RawCardLock {
   id: string;
@@ -92,16 +92,21 @@ export async function releaseLock(
 }
 
 export async function releaseLocksBySocket(socketId: string) {
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const locks = await tx.cardLock.findMany({
+  try {
+    const locks = await prisma.cardLock.findMany({
       where: { socketId },
       select: { cardId: true },
     });
 
-    await tx.cardLock.deleteMany({
-      where: { socketId },
-    });
+    if (locks.length > 0) {
+      await prisma.cardLock.deleteMany({
+        where: { socketId },
+      });
+    }
 
     return locks.map((l: { cardId: string }) => l.cardId);
-  });
+  } catch (error) {
+    console.error("[releaseLocksBySocket] Error:", error);
+    return [];
+  }
 }

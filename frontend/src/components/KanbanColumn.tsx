@@ -35,9 +35,11 @@ export default function KanbanColumn({
   const [titleValue, setTitleValue] = useState(column.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevColumnTitle, setPrevColumnTitle] = useState(column.title);
+  if (column.title !== prevColumnTitle) {
+    setPrevColumnTitle(column.title);
     setTitleValue(column.title);
-  }, [column.title]);
+  }
 
   useEffect(() => {
     if (isEditingTitle) {
