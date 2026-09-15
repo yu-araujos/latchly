@@ -1,4 +1,4 @@
-# 🔒 Latchly
+# Latchly
 
 A real-time collaborative Kanban board built to explore one specific problem: what happens when two users try to edit or move the same card at the same time?
 
@@ -6,49 +6,34 @@ A real-time collaborative Kanban board built to explore one specific problem: wh
 
 ## Features
 
-- **Pessimistic Concurrency Locks:** Opening a card registers a 60-second lock (TTL) backed by PostgreSQL & Socket.io.
-- **Real-Time Drag & Drop:** Move cards between columns seamlessly. If a card is locked by another user, dragging is automatically disabled.
-- **Real-Time Column & Card CRUD:** Create, rename (inline title editing), move, and delete columns or cards with instant updates across all connected clients.
-- **Atomic Position Reordering:** Backend transaction handling for card movement that shifts neighbor card positions safely without race conditions.
+- **Pessimistic concurrency locks:** opening a card registers a 60-second lock (TTL) backed by PostgreSQL & Socket.io.
+- **Real-time drag & drop:** move cards between columns seamlessly. If a card is locked by another user, dragging is disabled.
+- **Real-time column & card CRUD:** create, rename (inline title editing), move, and delete columns or cards, with instant updates across all connected clients.
+- **Atomic position reordering:** card moves run inside a backend transaction that shifts neighboring positions safely, without race conditions.
 
 ## How it works
 
 When a user opens a card to edit it, the backend registers a lock with a 60-second TTL and notifies everyone connected via WebSocket. While the lock is active, other users see the card as locked in real time. If the person closes the tab or loses connection, the lock is released along with it.
 
-Pessimistic locking was chosen over optimistic locking (where conflicts are resolved after they happen) because it simplifies the user experience: better to warn someone upfront than ask them to merge changes after the fact.
+Pessimistic locking was chosen over optimistic locking (resolving conflicts after they happen) because it's simpler for the user: better to warn someone upfront than ask them to merge changes after the fact.
 
-## Architecture & Trade-offs
+The flow for a lock, end to end:
 
-### Client-supplied User Identity (Known Limitation)
+1. User A opens a card and the client emits `claim-lock` with the card and user id.
+2. The backend validates there's no active lock from someone else and writes the lock (with its TTL) to Postgres.
+3. It broadcasts `lock-acquired` to everyone in the board's room — User A can now edit, User B sees the card as locked.
+4. When User A closes the card (or disconnects), `release-lock` fires, the lock row is deleted, and `lock-released` unlocks the card for everyone else.
 
-The WebSocket events and HTTP request payloads accept `userId` directly from the client to simplify profile switching and facilitate local testing of concurrency conflicts without requiring authentication setup (e.g., login/password screens). 
+## Architecture & trade-offs
 
-In a production environment, this value would be strictly extracted and verified from an authenticated session token (e.g., JWT, NextAuth, or IronSession) within Express middleware rather than trusted from the client payload.
+**Client-supplied user identity.** WebSocket events and HTTP payloads accept `userId` directly from the client, which keeps profile switching and local testing of concurrency conflicts simple without needing a login flow. In production this would come from an authenticated session (JWT, NextAuth, IronSession, etc.) verified in Express middleware, never trusted from the payload as-is.
 
-### No Automated Tests (Known Limitation)
-
-This project has no automated test suite or CI pipeline. The scope was proving out the concurrency/locking model end-to-end, not production hardening; verification was done manually (see "Testing locally" below). Automated testing and CI are deliberately out of scope here and are being explored in a separate project instead.
+**No automated tests.** The goal here was proving out the concurrency/locking model end to end, not production hardening, so there's no test suite or CI yet — verification was manual (see "Testing locally" below). Automated testing is being explored separately.
 
 ## Stack
 
 - **Backend:** Node.js, Express, Socket.io, PostgreSQL (Neon Serverless) + Prisma ORM
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS v4, `@hello-pangea/dnd`, Framer Motion, Sonner, Socket.io client
-
-## Concurrency & Real-Time Flow
-
-```text
-User A (Client)               Backend (Socket.io + Postgres)              User B (Client)
-      │                                     │                                    │
-      ├─── claim-lock (cardId, userId) ────►│                                    │
-      │                                     ├── [Validates lock & TTL]           │
-      │◄── lock-acquired (cardId, lock) ────┼─── lock-acquired (cardId, lock) ──►│ (Card turns locked)
-      │                                     │                                    │
-      │    [User A edits modal / drags]     │                                    │
-      │                                     │                                    │
-      ├─── release-lock (cardId, userId) ──►│                                    │
-      │                                     ├── [Deletes CardLock record]        │
-      │◄── lock-released (cardId) ──────────┼─── lock-released (cardId) ────────►│ (Card unlocked)
-```
 
 ## Testing locally
 
